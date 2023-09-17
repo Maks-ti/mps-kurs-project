@@ -269,7 +269,7 @@ STATE_START_HANDLER:
     CJNE A, #BUTTON_MINUS, STATE_START_NOT_BUTTON_MINUS
     SETB first_arg_negative ; утсанавливаем флаг отрицательности аргумента
     mov state, #STATE_NEGATIVE_FIRST_ARG ; переход в новое состояние
-    mov bte, '-' ; формируем байт для вывода на жки
+    mov bte, #'-' ; формируем байт для вывода на жки
     lcall send_data ; отправляем данные для отрисовки на жки
     ret
 
@@ -1294,30 +1294,46 @@ clear_display:
     ret
 
 compute_result:
-    ; проверяем нужно ли преобразовывать аргументы
-    jnb first_arg_negative, compute_result_first_arg_not_negative ; переход если бит = 0 (нулю)
-    lcall make_arg1_negative
-    compute_result_first_arg_not_negative:
-
-    jnb second_arg_negative, compute_result_second_arg_not_negative
-    lcall make_arg2_negative
-    compute_result_second_arg_not_negative:
-
-    ; далее выполняем вычисления
-
-    compute_result_perform_operation:
     ; Выполнение операции в зависимости от operation_sign
     mov A, operation_sign
     cjne A, #OPERATION_SIGN_MUL, compute_result_not_mul
+    ; Вычисляем знак результата
+    mov C, first_arg_negative
+    mov A, #0 ; ;clear A
+    rlc A ; пишем C в A.0
+    mov B, A
+    mov C, second_arg_negative
+    mov A, #0
+    rlc A
+    CJNE A, B, compute_result_mul_sign_xor_1
+    clr result_sign
+    sjmp compute_result_mul_sign_xor_end
+    compute_result_mul_sign_xor_1:
+    setb result_sign
+    compute_result_mul_sign_xor_end:
     ; Выполнить умножение
     mov A, arg1
     mov B, arg2
     mul AB
     mov arg1, A
-    sjmp compute_result_operation_end
+    ajmp compute_result_operation_end
 
     compute_result_not_mul:
     cjne A, #OPERATION_SIGN_DIV, compute_result_not_div
+    ; Вычисляем знак результата
+    mov C, first_arg_negative
+    mov A, #0 ; ;clear A
+    rlc A ; пишем C в A.0
+    mov B, A
+    mov C, second_arg_negative
+    mov A, #0
+    rlc A
+    CJNE A, B, compute_result_div_sign_xor_1
+    clr result_sign
+    sjmp compute_result_div_sign_xor_end
+    compute_result_div_sign_xor_1:
+    setb result_sign
+    compute_result_div_sign_xor_end:
     ; Выполнить деление
     mov A, arg2
     cjne A, #0, compute_result_div_not_on_zero ; Проверка деления на ноль
@@ -1330,34 +1346,94 @@ compute_result:
     mov B, arg2
     div ab
     mov arg1, A
-    sjmp compute_result_operation_end
+    ajmp compute_result_operation_end
 
     compute_result_not_div:
     cjne A, #OPERATION_SIGN_SUB, compute_result_not_sub
+    ; вычисляем знак результата
+    jnb first_arg_negative, compute_result_sub_first_arg_not_negative
+    ; значение знака отрицательное - ставим минус
+    setb result_sign
+    ; выполняем вычитание для двух отрицательных чисел
+    mov A, arg1
+    mov B, arg2
+    add A, B
+    mov arg1, A
+    sjmp compute_result_end
+    compute_result_sub_first_arg_not_negative:
+    ; первый аргумент не отрицательный, смотрим условие
+    mov A, arg1
+    mov B, arg2
+    clr C
+    SUBB A, B
+    ; если A < B то после subb флаг C будет установлен
+    JNC compute_result_sub_A_larger_then_B
+    ; A < B -> -
+    setb result_sign
+    ; выполняем arg2 - arg1
+    mov A, arg2
+    mov B, arg1
+    clr C
+    SUBB A, B
+    mov arg1, A
+    ajmp compute_result_operation_end
+    compute_result_sub_A_larger_then_B:
+    ; A >= B -> +
+    clr result_sign
+    compute_result_sub_sign_end:
     ; Выполнить вычитание
     mov A, arg1
     mov B, arg2
     clr C
     subb A, B
     mov arg1, A
-    sjmp compute_result_operation_end
+    ajmp compute_result_operation_end
 
     compute_result_not_sub:
     cjne A, #OPERATION_SIGN_SUM, compute_result_operation_end
+    ; Вычисляем знак результата
+    jb first_arg_negative, compute_result_sum_first_arg_is_negative
+    ; значение знака положительное - ставим плюс
+    clr result_sign
+    sjmp compute_result_sum_sign_end
+    compute_result_sum_first_arg_is_negative:
+    mov A, arg1
+    mov B, arg2
+    clr C
+    SUBB A, B
+    ; если A < B то после subb флаг C будет установлен
+    JNC compute_result_sum_A_larger_then_B
+    ; A < B -> +
+    clr result_sign
+    lcall make_arg1_negative
+    sjmp compute_result_sum_sign_end
+    compute_result_sum_A_larger_then_B:
+    ; A >= B -> -
+    setb result_sign
+    ; выполняем arg1 - arg2
+    mov A, arg1
+    mov B, arg2
+    clr C
+    SUBB A, B
+    mov arg1, A
+    ajmp compute_result_operation_end
+    compute_result_sum_sign_end:
     ; Выполнить сложение
     mov A, arg1
     mov B, arg2
     add A, B
     mov arg1, A
     compute_result_operation_end:
-    ; Проверка на переполнение
-    jnb OV, compute_result_no_overflow
-    ; Обработка переполнения и выход
+    ; Проверка на переполнение для знаковой арифметики
+    jnb OV, compute_result_end
+    ;произошло переполнение
     mov state, #STATE_OVERFLOW
     lcall clear_display
     lcall print_overflow_message
     ret
-    compute_result_no_overflow:
+    compute_result_end:
+    mov C, result_sign
+    mov first_arg_negative, C ; так как результат переносится в arg1 то и знак перенести надо
     ret
 
 make_arg1_negative:
@@ -1383,6 +1459,11 @@ make_arg2_negative:
     ret
 
 print_result:
+    ; проверяем необходимость вывода знака - (minus)
+    JNB first_arg_negative, print_result_not_negative
+    mov bte, #'-'
+    lcall send_data
+    print_result_not_negative:
     mov A, arg1
     mov B, #100d
     div AB ; делим A на B
