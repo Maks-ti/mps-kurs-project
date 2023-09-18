@@ -1362,7 +1362,7 @@ compute_result:
     mov B, arg2
     add A, B
     mov arg1, A
-    sjmp compute_result_end
+    sjmp compute_result_operation_end
     compute_result_sub_first_arg_not_negative:
     ; первый аргумент не отрицательный, смотрим условие
     mov A, arg1
@@ -1428,7 +1428,15 @@ compute_result:
     mov arg1, A
     compute_result_operation_end:
     ; Проверка на переполнение для знаковой арифметики
-    jnb OV, compute_result_end
+    jnb OV, compute_result_not_ov
+    ;произошло переполнение
+    mov state, #STATE_OVERFLOW
+    lcall clear_display
+    lcall print_overflow_message
+    ret
+    compute_result_not_ov:
+    ; Проверим на переполнение при знаковой арифметике
+    jnb C, compute_result_end
     ;произошло переполнение
     mov state, #STATE_OVERFLOW
     lcall clear_display
@@ -1573,4 +1581,5 @@ overflow_message_string:
 db ' overflow! ' ; 11 bytes
 
  END
+
 
