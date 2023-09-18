@@ -1411,8 +1411,12 @@ compute_result:
     JNC compute_result_sum_A_larger_then_B
     ; A < B -> +
     clr result_sign
-    lcall make_arg1_negative
-    sjmp compute_result_sum_sign_end
+    mov A, arg2
+    mov B, arg1
+    clr C
+    SUBB A, B
+    mov arg1, A
+    sjmp compute_result_operation_end
     compute_result_sum_A_larger_then_B:
     ; A >= B -> -
     setb result_sign
