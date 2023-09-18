@@ -50,6 +50,7 @@ map_start equ 30h ;начало области хранения КС клави�
 first_arg_negative      equ 00h ; 20h.0
 second_arg_negative     equ 01h ; 20h.1
 result_sign         equ 02h ; 20h.2
+is_sum_sub_operation    equ 03h ; 20h.3
 
 ; текущее состояние 
 state   equ 50h ; состояние конечного автомата
@@ -1297,6 +1298,7 @@ clear_display:
     ret
 
 compute_result:
+    clr is_sum_sub_operation
     ; Выполнение операции в зависимости от operation_sign
     mov A, operation_sign
     cjne A, #OPERATION_SIGN_MUL, compute_result_not_mul
@@ -1352,6 +1354,7 @@ compute_result:
     ajmp compute_result_operation_end
 
     compute_result_not_div:
+    setb is_sum_sub_operation
     cjne A, #OPERATION_SIGN_SUB, compute_result_not_sub
     ; вычисляем знак результата
     jnb first_arg_negative, compute_result_sub_first_arg_not_negative
@@ -1429,6 +1432,7 @@ compute_result:
     compute_result_operation_end:
     ; Проверка на переполнение для знаковой арифметики
     jnb OV, compute_result_not_ov
+    jb is_sum_sub_operation, compute_result_not_ov ; если это была операция + или - то скипаем проверку
     ;произошло переполнение
     mov state, #STATE_OVERFLOW
     lcall clear_display
