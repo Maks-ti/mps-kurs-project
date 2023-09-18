@@ -3,34 +3,34 @@
 ; переход в состояние STATE_ERROR происходит тогда, когда входной символ не соответсвует ни одному переходу в какое-либо состояние обработки
 ; переход в состояние STATE_START происходит при получении символа 'CLEAR' при данном символе всё подчищается и происходит переход в стартовое состояние
 ; СОСТОЯНИЯ КОНЕЧНОГО АВТОМАТА РАБОТЫ МПС
-STATE_ERROR                 equ 00h ; ->
-STATE_START                 equ 01h ; -> STATE_NEGATIVE_FIRST_ARG, STATE_FIRST_ARG
+STATE_ERROR                     equ 00h ; ->
+STATE_START                     equ 01h ; -> STATE_NEGATIVE_FIRST_ARG, STATE_FIRST_ARG
 STATE_NEGATIVE_FIRST_ARG        equ 02h ; -> STATE_FIRST_ARG
-STATE_FIRST_ARG             equ 03h ; -> STATE_FIRST_ARG, STATE_MUL_DIV_SIGN, STATE_SUM_SUB_SIGN
-STATE_MUL_DIV_SIGN          equ 04h ; -> STATE_NEGATIVE_SECOND_ARG, STATE_SECOND_ARG
-STATE_SUM_SUB_SIGN          equ 05h ; -> STATE_SECOND_ARG
+STATE_FIRST_ARG                 equ 03h ; -> STATE_FIRST_ARG, STATE_MUL_DIV_SIGN, STATE_SUM_SUB_SIGN
+STATE_MUL_DIV_SIGN              equ 04h ; -> STATE_NEGATIVE_SECOND_ARG, STATE_SECOND_ARG
+STATE_SUM_SUB_SIGN              equ 05h ; -> STATE_SECOND_ARG
 STATE_NEGATIVE_SECOND_ARG       equ 06h ; -> STATE_SECOND_ARG
-STATE_SECOND_ARG            equ 07h ; -> STATE_SECOND_ARG, STATE_COMPUTE_RESULT
+STATE_SECOND_ARG                equ 07h ; -> STATE_SECOND_ARG, STATE_COMPUTE_RESULT
 STATE_COMPUTE_RESULT            equ 08h ; -> STATE_FIRST_RESULT, STATE_SUM_SUB_SIGN, STATE_MUL_DIV_SIGN, SATE_OVERFLOW
-STATE_OVERFLOW              equ 09h ; ->
+STATE_OVERFLOW                  equ 09h ; ->
 
 ; сопоставление названий кнопок с их цифровым обозначением
-BUTTON_1        equ 01h
-BUTTON_2        equ 02h
-BUTTON_3        equ 03h
-BUTTON_4        equ 04h
-BUTTON_5        equ 05h
-BUTTON_6        equ 06h
-BUTTON_7        equ 07h
-BUTTON_8        equ 08h
-BUTTON_9        equ 09h
-BUTTON_0        equ 0ah
-BUTTON_CLEAR        equ 0bh
-BUTTON_COMPUTE      equ 0ch
-BUTTON_PLUS         equ 0dh
-BUTTON_MINUS        equ 0eh
-BUTTON_DIV      equ 0fh
-BUTTON_MUL      equ 10h
+BUTTON_1            equ 0Ch
+BUTTON_2            equ 0Bh
+BUTTON_3            equ 0Ah
+BUTTON_4            equ 08h
+BUTTON_5            equ 07h
+BUTTON_6            equ 06h
+BUTTON_7            equ 04h
+BUTTON_8            equ 03h
+BUTTON_9            equ 02h
+BUTTON_0            equ 0Fh
+BUTTON_CLEAR            equ 10h
+BUTTON_COMPUTE          equ 0Eh
+BUTTON_PLUS             equ 0Dh
+BUTTON_MINUS            equ 09h
+BUTTON_DIV          equ 01h
+BUTTON_MUL          equ 05h
 
 OPERATION_SIGN_MUL  equ 01h
 OPERATION_SIGN_DIV  equ 02h
@@ -47,9 +47,9 @@ N equ 40h ;номер нажатой клавиши
 map_start equ 30h ;начало области хранения КС клавиатуры
 
 ; биты знаков аргументов (если true -> имеем отрицательный знак операнда)
-first_arg_negative  equ 00h ; 20h.0
+first_arg_negative      equ 00h ; 20h.0
 second_arg_negative     equ 01h ; 20h.1
-result_sign     equ 02h ; 20h.2
+result_sign         equ 02h ; 20h.2
 
 ; текущее состояние 
 state   equ 50h ; состояние конечного автомата
@@ -83,7 +83,8 @@ start:
 
     setb EA  ; разрешаем все прерывания
     setb EX0 ; разрешение прерывания от int0
-
+    setb IT0 ; нужно со схемотехнической точки зрения
+    mov P0, #00h
     main_loop:
     finish: sjmp main_loop ; loop forever
 
@@ -157,6 +158,7 @@ get_button:
 
     end1:
         lcall get_num ;вызов подпрограммы опред. номера
+        mov P0, #00h ; DEBUG
         ret ;возврат из процедуры
 
     get_num:
