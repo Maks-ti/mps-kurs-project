@@ -1482,6 +1482,7 @@ print_result:
     mov A, arg1
     mov B, #100d
     div AB ; делим A на B
+    mov R2, A ; запоминаем аккамулятор
     CJNE A, #00h, print_result_100_not_null
     LJMP print_result_100_is_null
     print_result_100_not_null:
@@ -1493,6 +1494,7 @@ print_result:
     mov A, B ; остаток переносим в аккамулятор
     mov B, #10d
     div AB
+    CJNE R2, #00h, print_result_10_not_null
     CJNE A, #00h, print_result_10_not_null
     LJMP print_result_10_is_null
     print_result_10_not_null:
