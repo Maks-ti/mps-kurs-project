@@ -1239,7 +1239,7 @@ FORM_ARG_1:
     MUL AB
     JB OV, FORM_ARG_1_OVERFLOW
     ADD A, arg1_el
-    JB OV, FORM_ARG_1_OVERFLOW
+    JB C, FORM_ARG_1_OVERFLOW
     ; если ничего не переполнилось
     MOV arg1, A
     ret
@@ -1256,7 +1256,7 @@ FORM_ARG_2:
     MUL AB
     JB OV, FORM_ARG_2_OVERFLOW
     ADD A, arg2_el
-    JB OV, FORM_ARG_2_OVERFLOW
+    JB C, FORM_ARG_2_OVERFLOW
     ; если ничего не переполнилось
     MOV arg2, A
     ret
